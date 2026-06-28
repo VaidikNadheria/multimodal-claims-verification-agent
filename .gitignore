@@ -1,0 +1,61 @@
+# Secrets and local environment
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.token
+secrets/
+
+# Private challenge data and local images
+dataset/
+images/
+
+# Final submissions and generated outputs
+output.csv
+output*.csv
+*_backup*.csv
+*backup*.csv
+code.zip
+*.zip
+code/evaluation/sample_predictions*.csv
+code/evaluation/*.jsonl
+*.jsonl
+
+# Model caches and runtime logs
+.cache/
+cache/
+log.txt
+transcript*.txt
+chat_transcript*.txt
+*.log
+
+# Python/runtime artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+virtualenv/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS/editor clutter
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
