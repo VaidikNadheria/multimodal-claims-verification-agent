@@ -4,6 +4,11 @@ Public repository for my HackerRank Orchestrate June Edition solution.
 
 Final result: **ranked #20 out of 1,773 participants**.
 
+Built for the June 2026 HackerRank Orchestrate challenge. This repository
+contains the Python CLI, model integrations, evidence policies, and development
+evaluation report. For a concise technical overview and resume wording, see
+[Project Summary](docs/PROJECT_SUMMARY.md).
+
 This project builds a multimodal evidence-review system for structured damage
 and missing-content claims. Given a claim conversation, submitted images, a
 claimed object type, user history, and evidence requirements, the system
@@ -36,6 +41,26 @@ false.
 The implementation lives under [`code/`](./code/). The main terminal entry point
 is [`code/main.py`](./code/main.py).
 
+```mermaid
+flowchart TD
+    A["Claim CSV: conversation, object, image paths, user ID"] --> B["Load images and join history and evidence requirements"]
+    B --> C["Build structured review prompt"]
+    C --> D["Gemini primary visual review"]
+    D --> E["Deterministic policies and output normalization"]
+    E --> F{"Suspicious-row adjudication enabled and triggered?"}
+    F -->|Yes| G["OpenAI review using images and preliminary prediction"]
+    G --> H["Shared policies, material-conflict guard, and validation"]
+    F -->|No| H
+    H --> I["Validated CSV and adjudication metadata"]
+    J["Content-addressed response cache"] -.-> D
+    J -.-> G
+```
+
+Primary-provider failures can also use the configured fallback provider before
+the policy layer. If neither provider returns a usable response, the pipeline
+uses an explicitly conservative deterministic fallback. Resume support can
+reuse completed compatible rows.
+
 Core modules:
 
 - [`code/schema.py`](./code/schema.py): required output schema and allowed
@@ -58,7 +83,27 @@ Core modules:
   logic.
 - [`code/pipeline.py`](./code/pipeline.py): end-to-end orchestration.
 - [`code/evaluation/main.py`](./code/evaluation/main.py): sample-set evaluation
-  utility.
+  dry-run scaffold; it does not calculate accuracy metrics.
+
+## Technology Stack
+
+| Technology | Use in this project |
+|---|---|
+| Python 3.10+ | CLI, typed data models, orchestration, rules, validation, and CSV I/O |
+| Google Gemini API | Primary multimodal evidence review |
+| OpenAI API | Optional fallback and suspicious-row vision adjudication |
+| Pillow | Image decoding, orientation correction, resizing, and JPEG conversion |
+| pandas | CSV I/O when installed; standard-library CSV fallback is also supported |
+| certifi | CA certificates for HTTPS API requests |
+| REST/HTTPS, JSON, base64 | Direct API requests and image transport using Python `urllib` |
+| SHA-256 | Image-content hashes and response-cache identity |
+| Git / GitHub | Version control and public source documentation |
+
+The documented challenge run used `gemini-2.5-flash` and `gpt-5-mini` via
+environment overrides. These differ from the older fallback defaults in
+`code/config.py`; use the explicit model settings shown below when reproducing
+the documented configuration. This is a custom Python pipeline; it does not
+depend on an agent framework or model-training infrastructure.
 
 ## Key Features
 
@@ -171,14 +216,19 @@ python3 code/main.py \
   --adjudicate-suspicious
 ```
 
-Evaluation helper:
+Evaluation scaffold (requires compatible local sample data; makes no model
+calls and does not score predictions):
 
 ```bash
 python3 code/evaluation/main.py \
-  --predictions code/evaluation/sample_predictions_openai_adjudicated.csv \
-  --labels dataset/sample_claims.csv \
-  --report code/evaluation/evaluation_report.md
+  --output /tmp/orchestrate_sample_dry_run.csv \
+  --limit 2
 ```
+
+The sample predictions and metrics below were produced during challenge
+development. The public repository includes the report, but not the private
+labels/predictions or a packaged scoring script. The scaffold checks pipeline
+plumbing using a conservative fallback; a dry run is not an accuracy test.
 
 ## Evaluation Summary
 
@@ -200,6 +250,13 @@ suspicious-only OpenAI adjudication:
 These metrics were measured on the provided sample labels during the challenge.
 They are useful as a development diagnostic, not as a claim that the same scores
 will reproduce on other private or public datasets.
+
+Claim-status agreement rose from **75% to 90%** on that 20-row development
+sample, a **15 percentage-point** improvement. Evidence-sufficiency agreement
+rose from 80% to 100%, while strict row-level exact match remained **40%**.
+The sample was used for development, so these are not held-out benchmark scores.
+The report records a final submission workload of **44 claims and 82 images**;
+that workload is separate from the labeled sample evaluation.
 
 ## Limitations
 
